@@ -167,6 +167,8 @@ function PointageList() {
   const [startValue, setStartValue] = useState('')
   const [endValue, setEndValue] = useState('')
 
+  const [exportProgress, setExportProgress] = useState(null)
+
   useEffect(() => {
     let active = true
 
@@ -224,9 +226,16 @@ function PointageList() {
     })
   }, [pointages, employee, periodMode, dayValue, monthValue, startValue, endValue])
 
-  function handleExport() {
+  async function handleExport() {
     const filename = buildFilename({ periodMode, dayValue, monthValue, startValue, endValue })
-    downloadPointagesExcel(filtered, filename)
+    setExportProgress({ done: 0, total: filtered.length })
+    try {
+      await downloadPointagesExcel(filtered, filename, {
+        onProgress: (done, total) => setExportProgress({ done, total }),
+      })
+    } finally {
+      setExportProgress(null)
+    }
   }
 
   if (loading) return <p className="text-ink-muted">Chargement...</p>
@@ -252,15 +261,17 @@ function PointageList() {
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-sm text-ink-muted">
-          {filtered.length} pointage{filtered.length > 1 ? 's' : ''}
+          {exportProgress
+            ? `Export en cours… ${exportProgress.done}/${exportProgress.total} photo${exportProgress.total > 1 ? 's' : ''}`
+            : `${filtered.length} pointage${filtered.length > 1 ? 's' : ''}`}
         </p>
         <button
           type="button"
           onClick={handleExport}
-          disabled={filtered.length === 0}
+          disabled={filtered.length === 0 || !!exportProgress}
           className="min-h-11 rounded-lg border border-ocre px-4 py-2 font-display text-sm text-ocre disabled:opacity-40"
         >
-          Exporter (.xlsx)
+          {exportProgress ? 'Export…' : 'Exporter (.xlsx)'}
         </button>
       </div>
 
