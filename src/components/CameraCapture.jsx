@@ -5,14 +5,16 @@ export default function CameraCapture({ onCapture, onCancel }) {
   const streamRef = useRef(null)
   const [error, setError] = useState('')
   const [photo, setPhoto] = useState(null)
+  const [facingMode, setFacingMode] = useState('user')
 
   useEffect(() => {
     let active = true
 
     async function startCamera() {
+      streamRef.current?.getTracks().forEach((track) => track.stop())
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' },
+          video: { facingMode },
           audio: false,
         })
         if (!active) {
@@ -21,6 +23,7 @@ export default function CameraCapture({ onCapture, onCancel }) {
         }
         streamRef.current = stream
         if (videoRef.current) videoRef.current.srcObject = stream
+        setError('')
       } catch {
         if (active) setError("Impossible d'accéder à la caméra : autorisez l'accès pour pointer")
       }
@@ -32,7 +35,11 @@ export default function CameraCapture({ onCapture, onCancel }) {
       active = false
       streamRef.current?.getTracks().forEach((track) => track.stop())
     }
-  }, [])
+  }, [facingMode])
+
+  function switchCamera() {
+    setFacingMode((current) => (current === 'user' ? 'environment' : 'user'))
+  }
 
   function capture() {
     const video = videoRef.current
@@ -73,7 +80,32 @@ export default function CameraCapture({ onCapture, onCancel }) {
 
         <div className="relative mb-4 flex-1 overflow-hidden rounded-xl border border-border bg-bg-soft">
           {!photo ? (
-            <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+            <>
+              <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={switchCamera}
+                aria-label="Changer de caméra"
+                className="absolute top-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-bg/70 text-ink backdrop-blur-sm"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M17 2.1l4 4-4 4" />
+                  <path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8" />
+                  <path d="M7 21.9l-4-4 4-4" />
+                  <path d="M21 11.8v2a4 4 0 0 1-4 4H4.2" />
+                </svg>
+              </button>
+            </>
           ) : (
             <img src={photo.url} alt="Photo capturée" className="h-full w-full object-cover" />
           )}
